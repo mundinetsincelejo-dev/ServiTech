@@ -252,7 +252,7 @@ function CreateTicketForm({ onSubmit }: { onSubmit: (data: Partial<Ticket>) => v
         <Label>Descripción</Label>
         <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalle del fallo o requerimiento" />
       </div>
-      <Button className="w-full" onClick={() => onSubmit(form)}>Crear Solicitud</Button>
+      <Button className="w-full" onClick={() => onSubmit({ ...form, clientId: Number(form.clientId) } as any)}>Crear Solicitud</Button>
     </div>
   );
 }
