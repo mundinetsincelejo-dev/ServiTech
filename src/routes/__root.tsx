@@ -44,6 +44,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "ServiTech — Gestión de Servicio Técnico" },
+      { name: "twitter:description", content: "Plataforma integral para gestión de solicitudes de servicio técnico" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d4ad0bb7-c638-43cd-a52a-8aeef489b9e8" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/d4ad0bb7-c638-43cd-a52a-8aeef489b9e8" },
     ],
     links: [
       {
