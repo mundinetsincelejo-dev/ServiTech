@@ -81,8 +81,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-sidebar-border px-5 py-4">
-          <p className="text-xs text-sidebar-foreground/50">© 2026 ServiTech</p>
+        <div className="border-t border-sidebar-border px-3 py-4">
+          <button
+            onClick={handleSignOut}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="h-4.5 w-4.5" />
+            Cerrar sesión
+          </button>
+          <p className="mt-2 px-3 text-xs text-sidebar-foreground/50">© 2026 ServiTech</p>
         </div>
       </aside>
 
