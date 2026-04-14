@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import {
   LayoutDashboard,
@@ -8,9 +8,11 @@ import {
   Menu,
   X,
   Wrench,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 const navItems = [
   { to: '/' as const, icon: LayoutDashboard, label: 'Dashboard' },
