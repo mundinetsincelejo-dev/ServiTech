@@ -9,7 +9,7 @@ import { Search, Clock, Wrench, Loader2 } from 'lucide-react';
 import { useTickets, useClients } from '@/hooks/use-tickets';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 
-export const Route = createFileRoute('/historial')({
+export const Route = createFileRoute('/_authenticated/historial')({
   component: HistorialPage,
   head: () => ({
     meta: [
