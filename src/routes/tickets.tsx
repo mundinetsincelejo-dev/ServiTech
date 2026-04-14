@@ -1,13 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import {
-  tickets as allTickets,
-  clients,
   statusLabels,
   priorityLabels,
   serviceTypeLabels,
@@ -32,7 +30,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, Loader2 } from 'lucide-react';
+import { useTickets, useClients, useCreateTicket } from '@/hooks/use-tickets';
 
 export const Route = createFileRoute('/tickets')({
   component: TicketsPage,
@@ -45,45 +44,30 @@ export const Route = createFileRoute('/tickets')({
 });
 
 function TicketsPage() {
-  const [ticketList, setTicketList] = useState<Ticket[]>(allTickets);
+  const { data: tickets = [], isLoading } = useTickets();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showCreate, setShowCreate] = useState(false);
   const [viewTicket, setViewTicket] = useState<Ticket | null>(null);
 
-  const filtered = ticketList.filter((t) => {
+  const filtered = tickets.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.client.company.toLowerCase().includes(search.toLowerCase()) ||
+      (t.clients?.company || '').toLowerCase().includes(search.toLowerCase()) ||
       String(t.id).includes(search);
     const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreate = (data: Partial<Ticket>) => {
-    const newTicket: Ticket = {
-      id: Math.max(...ticketList.map((t) => t.id)) + 1,
-      clientId: Number(data.clientId) || 1,
-      client: clients.find((c) => c.id === Number(data.clientId)) || clients[0],
-      serviceType: (data.serviceType as ServiceType) || 'correctivo',
-      priority: (data.priority as TicketPriority) || 'media',
-      status: 'abierto',
-      title: data.title || 'Nuevo ticket',
-      description: data.description || '',
-      equipmentModel: data.equipmentModel || '',
-      serialNumber: data.serialNumber || '',
-      assignedTech: data.assignedTech || 'Sin asignar',
-      createdAt: new Date().toISOString(),
-      scheduledDate: null,
-      scheduledTime: null,
-      closedAt: null,
-      resolutionNotes: null,
-      partsUsed: [],
-      resolutionTimeHours: null,
-    };
-    setTicketList([newTicket, ...ticketList]);
-    setShowCreate(false);
-  };
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -122,7 +106,7 @@ function TicketsPage() {
               <DialogHeader>
                 <DialogTitle>Crear Solicitud</DialogTitle>
               </DialogHeader>
-              <CreateTicketForm onSubmit={handleCreate} />
+              <CreateTicketForm onClose={() => setShowCreate(false)} />
             </DialogContent>
           </Dialog>
         </div>
@@ -149,11 +133,11 @@ function TicketsPage() {
                     <tr key={t.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs">#{t.id}</td>
                       <td className="max-w-[200px] truncate px-4 py-3 font-medium">{t.title}</td>
-                      <td className="hidden px-4 py-3 sm:table-cell text-muted-foreground">{t.client.company}</td>
-                      <td className="hidden px-4 py-3 md:table-cell text-muted-foreground">{serviceTypeLabels[t.serviceType]}</td>
+                      <td className="hidden px-4 py-3 sm:table-cell text-muted-foreground">{t.clients?.company}</td>
+                      <td className="hidden px-4 py-3 md:table-cell text-muted-foreground">{serviceTypeLabels[t.service_type]}</td>
                       <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                       <td className="hidden px-4 py-3 lg:table-cell"><PriorityBadge priority={t.priority} /></td>
-                      <td className="hidden px-4 py-3 lg:table-cell text-muted-foreground">{t.assignedTech}</td>
+                      <td className="hidden px-4 py-3 lg:table-cell text-muted-foreground">{t.assigned_tech}</td>
                       <td className="px-4 py-3">
                         <Button variant="ghost" size="icon" onClick={() => setViewTicket(t)}>
                           <Eye className="h-4 w-4" />
@@ -185,27 +169,37 @@ function TicketsPage() {
   );
 }
 
-function CreateTicketForm({ onSubmit }: { onSubmit: (data: Partial<Ticket>) => void }) {
+function CreateTicketForm({ onClose }: { onClose: () => void }) {
+  const { data: clients = [] } = useClients();
+  const createTicket = useCreateTicket();
+
   const [form, setForm] = useState({
-    clientId: '1',
+    client_id: '',
     title: '',
     description: '',
-    serviceType: 'correctivo' as ServiceType,
+    service_type: 'correctivo' as ServiceType,
     priority: 'media' as TicketPriority,
-    equipmentModel: '',
-    serialNumber: '',
-    assignedTech: 'Juan Pérez',
+    equipment_model: '',
+    serial_number: '',
+    assigned_tech: 'Juan Pérez',
   });
+
+  const handleSubmit = () => {
+    if (!form.client_id || !form.title) return;
+    createTicket.mutate(form, {
+      onSuccess: () => onClose(),
+    });
+  };
 
   return (
     <div className="space-y-4">
       <div>
         <Label>Cliente</Label>
-        <Select value={form.clientId} onValueChange={(v) => setForm({ ...form, clientId: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+        <Select value={form.client_id} onValueChange={(v) => setForm({ ...form, client_id: v })}>
+          <SelectTrigger><SelectValue placeholder="Seleccionar cliente" /></SelectTrigger>
           <SelectContent>
             {clients.map((c) => (
-              <SelectItem key={c.id} value={String(c.id)}>{c.name} — {c.company}</SelectItem>
+              <SelectItem key={c.id} value={c.id}>{c.name} — {c.company}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -217,7 +211,7 @@ function CreateTicketForm({ onSubmit }: { onSubmit: (data: Partial<Ticket>) => v
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Tipo de Servicio</Label>
-          <Select value={form.serviceType} onValueChange={(v) => setForm({ ...form, serviceType: v as ServiceType })}>
+          <Select value={form.service_type} onValueChange={(v) => setForm({ ...form, service_type: v as ServiceType })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(serviceTypeLabels) as ServiceType[]).map((s) => (
@@ -241,18 +235,20 @@ function CreateTicketForm({ onSubmit }: { onSubmit: (data: Partial<Ticket>) => v
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Modelo Equipo</Label>
-          <Input value={form.equipmentModel} onChange={(e) => setForm({ ...form, equipmentModel: e.target.value })} />
+          <Input value={form.equipment_model} onChange={(e) => setForm({ ...form, equipment_model: e.target.value })} />
         </div>
         <div>
           <Label>Nº Serie</Label>
-          <Input value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} />
+          <Input value={form.serial_number} onChange={(e) => setForm({ ...form, serial_number: e.target.value })} />
         </div>
       </div>
       <div>
         <Label>Descripción</Label>
         <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Detalle del fallo o requerimiento" />
       </div>
-      <Button className="w-full" onClick={() => onSubmit({ ...form, clientId: Number(form.clientId) } as any)}>Crear Solicitud</Button>
+      <Button className="w-full" onClick={handleSubmit} disabled={createTicket.isPending}>
+        {createTicket.isPending ? 'Creando...' : 'Crear Solicitud'}
+      </Button>
     </div>
   );
 }
@@ -272,41 +268,41 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
           <PriorityBadge priority={ticket.priority} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <InfoField label="Cliente" value={ticket.client.name} />
-          <InfoField label="Empresa" value={ticket.client.company} />
-          <InfoField label="Teléfono" value={ticket.client.phone} />
-          <InfoField label="Email" value={ticket.client.email} />
-          <InfoField label="Tipo Servicio" value={serviceTypeLabels[ticket.serviceType]} />
-          <InfoField label="Técnico" value={ticket.assignedTech} />
-          <InfoField label="Equipo" value={ticket.equipmentModel} />
-          <InfoField label="Nº Serie" value={ticket.serialNumber} />
+          <InfoField label="Cliente" value={ticket.clients?.name || ''} />
+          <InfoField label="Empresa" value={ticket.clients?.company || ''} />
+          <InfoField label="Teléfono" value={ticket.clients?.phone || ''} />
+          <InfoField label="Email" value={ticket.clients?.email || ''} />
+          <InfoField label="Tipo Servicio" value={serviceTypeLabels[ticket.service_type]} />
+          <InfoField label="Técnico" value={ticket.assigned_tech} />
+          <InfoField label="Equipo" value={ticket.equipment_model} />
+          <InfoField label="Nº Serie" value={ticket.serial_number} />
         </div>
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">Descripción</p>
           <p className="text-foreground">{ticket.description}</p>
         </div>
-        {ticket.resolutionNotes && (
+        {ticket.resolution_notes && (
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">Notas de Resolución</p>
-            <p className="text-foreground">{ticket.resolutionNotes}</p>
+            <p className="text-foreground">{ticket.resolution_notes}</p>
           </div>
         )}
-        {ticket.partsUsed.length > 0 && (
+        {ticket.ticket_parts.length > 0 && (
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1">Repuestos Usados</p>
             <ul className="list-disc list-inside text-foreground">
-              {ticket.partsUsed.map((p, i) => <li key={i}>{p}</li>)}
+              {ticket.ticket_parts.map((p, i) => <li key={i}>{p.part_name}</li>)}
             </ul>
           </div>
         )}
-        {ticket.scheduledDate && (
+        {ticket.scheduled_date && (
           <div className="flex gap-3">
-            <InfoField label="Fecha Agendada" value={ticket.scheduledDate} />
-            <InfoField label="Hora" value={ticket.scheduledTime || '-'} />
+            <InfoField label="Fecha Agendada" value={ticket.scheduled_date} />
+            <InfoField label="Hora" value={ticket.scheduled_time || '-'} />
           </div>
         )}
-        {ticket.resolutionTimeHours != null && (
-          <InfoField label="Tiempo Resolución" value={`${ticket.resolutionTimeHours} hrs`} />
+        {ticket.resolution_time_hours != null && (
+          <InfoField label="Tiempo Resolución" value={`${ticket.resolution_time_hours} hrs`} />
         )}
       </div>
     </>

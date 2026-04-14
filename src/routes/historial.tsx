@@ -1,11 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { tickets, clients, serviceTypeLabels, statusLabels, priorityLabels, type Ticket } from '@/lib/mock-data';
+import { statusLabels, priorityLabels, serviceTypeLabels, type Ticket, type Client } from '@/lib/mock-data';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
-import { Search, Clock, Wrench } from 'lucide-react';
+import { Search, Clock, Wrench, Loader2 } from 'lucide-react';
+import { useTickets, useClients } from '@/hooks/use-tickets';
+import { CardHeader, CardTitle } from '@/components/ui/card';
 
 export const Route = createFileRoute('/historial')({
   component: HistorialPage,
@@ -19,6 +21,10 @@ export const Route = createFileRoute('/historial')({
 
 function HistorialPage() {
   const [search, setSearch] = useState('');
+  const { data: tickets = [], isLoading: loadingTickets } = useTickets();
+  const { data: clients = [], isLoading: loadingClients } = useClients();
+
+  const isLoading = loadingTickets || loadingClients;
 
   const matchingClients = search.length > 1
     ? clients.filter(
@@ -31,24 +37,36 @@ function HistorialPage() {
   const matchingTickets = search.length > 1
     ? tickets.filter(
         (t) =>
-          t.client.name.toLowerCase().includes(search.toLowerCase()) ||
-          t.client.company.toLowerCase().includes(search.toLowerCase()) ||
-          t.equipmentModel.toLowerCase().includes(search.toLowerCase()) ||
-          t.serialNumber.toLowerCase().includes(search.toLowerCase())
+          t.clients?.name.toLowerCase().includes(search.toLowerCase()) ||
+          t.clients?.company.toLowerCase().includes(search.toLowerCase()) ||
+          t.equipment_model.toLowerCase().includes(search.toLowerCase()) ||
+          t.serial_number.toLowerCase().includes(search.toLowerCase())
       )
     : tickets;
 
   // Group by client
-  const grouped = matchingClients.reduce<Record<number, { client: typeof clients[0]; tickets: Ticket[] }>>(
+  const grouped = matchingClients.reduce<Record<string, { client: Client; tickets: Ticket[] }>>(
     (acc, client) => {
-      const clientTickets = matchingTickets.filter((t) => t.clientId === client.id);
+      const clientTickets = matchingTickets
+        .filter((t) => t.client_id === client.id)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
       if (clientTickets.length > 0) {
-        acc[client.id] = { client, tickets: clientTickets.sort((a, b) => b.createdAt.localeCompare(a.createdAt)) };
+        acc[client.id] = { client, tickets: clientTickets };
       }
       return acc;
     },
     {}
   );
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -88,7 +106,7 @@ function HistorialPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{t.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {t.equipmentModel} · {t.serialNumber}
+                        {t.equipment_model} · {t.serial_number}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -100,25 +118,25 @@ function HistorialPage() {
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {new Date(t.createdAt).toLocaleDateString('es-CL')}
+                      {new Date(t.created_at).toLocaleDateString('es-CL')}
                     </span>
                     <span className="flex items-center gap-1">
                       <Wrench className="h-3 w-3" />
-                      {t.assignedTech}
+                      {t.assigned_tech}
                     </span>
-                    {t.resolutionTimeHours != null && (
-                      <span>Resolución: {t.resolutionTimeHours} hrs</span>
+                    {t.resolution_time_hours != null && (
+                      <span>Resolución: {t.resolution_time_hours} hrs</span>
                     )}
                   </div>
-                  {t.partsUsed.length > 0 && (
+                  {t.ticket_parts.length > 0 && (
                     <div className="text-xs">
                       <span className="font-medium">Repuestos: </span>
-                      {t.partsUsed.join(', ')}
+                      {t.ticket_parts.map((p) => p.part_name).join(', ')}
                     </div>
                   )}
-                  {t.resolutionNotes && (
+                  {t.resolution_notes && (
                     <div className="text-xs rounded bg-success/10 p-2 text-success">
-                      {t.resolutionNotes}
+                      {t.resolution_notes}
                     </div>
                   )}
                 </div>
