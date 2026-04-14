@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { tickets, statusLabels, type TicketStatus } from '@/lib/mock-data';
+import { statusLabels, type Ticket, type TicketStatus } from '@/lib/mock-data';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import {
   BarChart,
@@ -20,7 +20,8 @@ import {
   Cell,
 } from 'recharts';
 import { Link } from '@tanstack/react-router';
-import { ClipboardList, CalendarClock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ClipboardList, CalendarClock, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useTickets } from '@/hooks/use-tickets';
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
@@ -33,12 +34,24 @@ export const Route = createFileRoute('/')({
 });
 
 function DashboardPage() {
+  const { data: tickets = [], isLoading } = useTickets();
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   const open = tickets.filter((t) => t.status === 'abierto').length;
   const inProgress = tickets.filter((t) => t.status === 'en_proceso').length;
   const paused = tickets.filter((t) => t.status === 'pausado').length;
   const closed = tickets.filter((t) => t.status === 'cerrado').length;
-  const today = '2026-04-13';
-  const todayScheduled = tickets.filter((t) => t.scheduledDate === today);
+  const today = new Date().toISOString().split('T')[0];
+  const todayScheduled = tickets.filter((t) => t.scheduled_date === today);
   const criticalOrHigh = tickets.filter(
     (t) => (t.priority === 'alta' || t.priority === 'critica') && t.status !== 'cerrado'
   );
@@ -53,7 +66,7 @@ function DashboardPage() {
   const techLoad = tickets
     .filter((t) => t.status !== 'cerrado')
     .reduce<Record<string, number>>((acc, t) => {
-      acc[t.assignedTech] = (acc[t.assignedTech] || 0) + 1;
+      acc[t.assigned_tech] = (acc[t.assigned_tech] || 0) + 1;
       return acc;
     }, {});
 
@@ -162,7 +175,7 @@ function DashboardPage() {
                           {t.title}
                         </Link>
                       </td>
-                      <td className="hidden px-4 py-3 sm:table-cell">{t.client.company}</td>
+                      <td className="hidden px-4 py-3 sm:table-cell">{t.clients?.company}</td>
                       <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                       <td className="hidden px-4 py-3 md:table-cell"><PriorityBadge priority={t.priority} /></td>
                     </tr>

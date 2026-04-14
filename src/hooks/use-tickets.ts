@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Ticket, Client } from '@/lib/mock-data';
+import type { Database } from '@/integrations/supabase/types';
 
 const TICKETS_KEY = ['tickets'];
 const CLIENTS_KEY = ['clients'];
@@ -36,16 +37,7 @@ export function useClients() {
 export function useCreateTicket() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (ticket: {
-      client_id: string;
-      title: string;
-      description: string;
-      service_type: string;
-      priority: string;
-      equipment_model: string;
-      serial_number: string;
-      assigned_tech: string;
-    }) => {
+    mutationFn: async (ticket: Database['public']['Tables']['tickets']['Insert']) => {
       const { data, error } = await supabase
         .from('tickets')
         .insert(ticket)

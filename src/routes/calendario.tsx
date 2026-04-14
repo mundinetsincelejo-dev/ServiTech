@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { tickets, serviceTypeLabels } from '@/lib/mock-data';
+import { serviceTypeLabels, type Ticket } from '@/lib/mock-data';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import {
   format,
@@ -12,13 +12,13 @@ import {
   eachDayOfInterval,
   addMonths,
   subMonths,
-  isSameMonth,
   isSameDay,
   getDay,
   parseISO,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MapPin, Loader2 } from 'lucide-react';
+import { useTickets } from '@/hooks/use-tickets';
 
 export const Route = createFileRoute('/calendario')({
   component: CalendarioPage,
@@ -31,25 +31,35 @@ export const Route = createFileRoute('/calendario')({
 });
 
 function CalendarioPage() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1)); // April 2026
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(2026, 3, 13));
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { data: tickets = [], isLoading } = useTickets();
 
-  const scheduledTickets = tickets.filter((t) => t.scheduledDate);
+  const scheduledTickets = tickets.filter((t) => t.scheduled_date);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Pad beginning with empty slots
   const startDay = getDay(monthStart);
-  const paddingDays = startDay === 0 ? 6 : startDay - 1; // Monday start
+  const paddingDays = startDay === 0 ? 6 : startDay - 1;
 
   const getTicketsForDay = (date: Date) =>
-    scheduledTickets.filter((t) => t.scheduledDate && isSameDay(parseISO(t.scheduledDate), date));
+    scheduledTickets.filter((t) => t.scheduled_date && isSameDay(parseISO(t.scheduled_date), date));
 
   const selectedDayTickets = selectedDate ? getTicketsForDay(selectedDate) : [];
 
   const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -81,7 +91,7 @@ function CalendarioPage() {
               {days.map((day) => {
                 const dayTickets = getTicketsForDay(day);
                 const isSelected = selectedDate && isSameDay(day, selectedDate);
-                const isToday = isSameDay(day, new Date(2026, 3, 13));
+                const isToday = isSameDay(day, new Date());
                 return (
                   <button
                     key={day.toISOString()}
@@ -123,31 +133,31 @@ function CalendarioPage() {
           )}
 
           {selectedDayTickets
-            .sort((a, b) => (a.scheduledTime || '').localeCompare(b.scheduledTime || ''))
+            .sort((a, b) => (a.scheduled_time || '').localeCompare(b.scheduled_time || ''))
             .map((t) => (
               <Card key={t.id} className="overflow-hidden">
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{t.title}</p>
-                      <p className="text-xs text-muted-foreground">{t.client.company}</p>
+                      <p className="text-xs text-muted-foreground">{t.clients?.company}</p>
                     </div>
                     <StatusBadge status={t.status} />
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    {t.scheduledTime && (
+                    {t.scheduled_time && (
                       <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {t.scheduledTime}
+                        <Clock className="h-3 w-3" /> {t.scheduled_time}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {t.client.address}
+                      <MapPin className="h-3 w-3" /> {t.clients?.address}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">{serviceTypeLabels[t.serviceType]}</span>
+                    <span className="text-muted-foreground">{serviceTypeLabels[t.service_type]}</span>
                     <PriorityBadge priority={t.priority} />
-                    <span className="text-muted-foreground ml-auto">{t.assignedTech}</span>
+                    <span className="text-muted-foreground ml-auto">{t.assigned_tech}</span>
                   </div>
                 </CardContent>
               </Card>
