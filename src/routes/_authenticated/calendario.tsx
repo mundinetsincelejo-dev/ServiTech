@@ -20,7 +20,7 @@ import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Clock, MapPin, Loader2 } from 'lucide-react';
 import { useTickets } from '@/hooks/use-tickets';
 
-export const Route = createFileRoute('/calendario')({
+export const Route = createFileRoute('/_authenticated/calendario')({
   component: CalendarioPage,
   head: () => ({
     meta: [

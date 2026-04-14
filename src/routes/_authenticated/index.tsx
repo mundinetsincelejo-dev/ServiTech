@@ -23,7 +23,7 @@ import { Link } from '@tanstack/react-router';
 import { ClipboardList, CalendarClock, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTickets } from '@/hooks/use-tickets';
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute('/_authenticated/')({
   component: DashboardPage,
   head: () => ({
     meta: [

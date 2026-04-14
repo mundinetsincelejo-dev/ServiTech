@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Search, Eye, Loader2 } from 'lucide-react';
 import { useTickets, useClients, useCreateTicket } from '@/hooks/use-tickets';
 
-export const Route = createFileRoute('/tickets')({
+export const Route = createFileRoute('/_authenticated/tickets')({
   component: TicketsPage,
   head: () => ({
     meta: [
