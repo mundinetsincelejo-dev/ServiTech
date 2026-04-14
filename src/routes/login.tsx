@@ -89,7 +89,7 @@ function LoginPage() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             {message && (
-              <p className="text-sm text-green-600">{message}</p>
+              <p className="text-sm text-success">{message}</p>
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
