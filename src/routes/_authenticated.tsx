@@ -14,7 +14,8 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
 
-    const userEmail = session.user.email;
+    // Normalize email to be case-insensitive and trim whitespace
+    const userEmail = session.user.email?.trim().toLowerCase();
     const userRole: 'admin' | 'technician' =
       userEmail === 'mundinet.sincelejo@gmail.com' ? 'admin' : 'technician';
 
