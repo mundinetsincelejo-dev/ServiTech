@@ -34,7 +34,9 @@ export const Route = createFileRoute('/_authenticated/')({
 });
 
 function DashboardPage() {
-  const { data: tickets = [], isLoading } = useTickets();
+  const { user } = Route.useRouteContext();
+  // Filter tickets by assigned technician if the user is a technician
+  const { data: tickets = [], isLoading } = useTickets(user.role === 'technician' ? user.id : undefined);
 
   if (isLoading) {
     return (

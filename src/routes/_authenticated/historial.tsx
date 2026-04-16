@@ -22,7 +22,9 @@ export const Route = createFileRoute('/_authenticated/historial')({
 function HistorialPage() {
   const [search, setSearch] = useState('');
   const { data: tickets = [], isLoading: loadingTickets } = useTickets();
-  const { data: clients = [], isLoading: loadingClients } = useClients();
+  const { user } = Route.useRouteContext();
+  // Filter tickets by assigned technician if the user is a technician
+  const { data: clients = [], isLoading: loadingClients } = useClients(user.role === 'technician' ? user.id : undefined);
 
   const isLoading = loadingTickets || loadingClients;
 
@@ -67,7 +69,8 @@ function HistorialPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <AppLayout>
+      <div className="space-y-4">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input

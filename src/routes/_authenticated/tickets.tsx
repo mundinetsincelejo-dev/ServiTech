@@ -43,7 +43,9 @@ export const Route = createFileRoute('/_authenticated/tickets')({
 });
 
 function TicketsPage() {
-  const { data: tickets = [], isLoading: loadingTickets } = useTickets();
+  const { user } = Route.useRouteContext();
+  // Filter tickets by assigned technician if the user is a technician
+  const { data: tickets = [], isLoading: loadingTickets } = useTickets(user.role === 'technician' ? user.id : undefined);
   const { data: clients = [], isLoading: loadingClients } = useClients();
   const { data: technicians = [], isLoading: loadingTechs } = useTechnicians();
   const deleteTicketMutation = useDeleteTicket();
@@ -77,7 +79,7 @@ function TicketsPage() {
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4"> {/* Removed AppLayout */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 items-center gap-2">
             <div className="relative flex-1 max-w-sm">
@@ -94,12 +96,15 @@ function TicketsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Dialog open={showForm} onOpenChange={(o) => !o && closeForm()}>
-            <DialogTrigger asChild>
-              <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
-                <Plus className="mr-1 h-4 w-4" /> Nuevo Ticket
-              </Button>
-            </DialogTrigger>
+          {user.role === 'admin' && ( // Only admin can create new tickets
+            <Dialog open={showForm} onOpenChange={(o) => !o && closeForm()}>
+              <DialogTrigger asChild>
+                <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
+                  <Plus className="mr-1 h-4 w-4" /> Nuevo Ticket
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          )}
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? 'Editar Ticket' : 'Crear Solicitud'}</DialogTitle>
@@ -136,7 +141,9 @@ function TicketsPage() {
                       <td className="hidden px-4 py-3 lg:table-cell"><PriorityBadge priority={t.priority} /></td>
                       <td className="hidden px-4 py-3 lg:table-cell text-muted-foreground">{t.technicians?.name}</td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1"> {/* Only allow edit/delete if assigned to technician or admin */}
+                          {/* Technicians can only edit their assigned tickets, admin can edit all */}
+                          {(user.role === 'admin' || (user.role === 'technician' && t.assigned_tech_id === user.id)) && (
                           <Button variant="ghost" size="icon" onClick={() => setViewTicket(t)}><Eye className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
                           <AlertDialog>
@@ -156,6 +163,7 @@ function TicketsPage() {
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -184,12 +192,14 @@ function TicketForm({
   existing: Ticket | null;
   onClose: () => void;
   clients: Client[];
-  technicians: Technician[];
+  technicians: Technician[]; // All technicians
+  userRole: 'admin' | 'technician'; // Pass user role to form
 }) {
   const createTicketMutation = useCreateTicket();
   const updateTicketMutation = useUpdateTicket();
 
   const [form, setForm] = useState({
+    id: existing?.id, // Keep ID for updates
     client_id: existing?.client_id ?? '',
     title: existing?.title ?? '',
     description: existing?.description ?? '',
@@ -197,7 +207,7 @@ function TicketForm({
     priority: existing?.priority ?? ('media' as TicketPriority),
     status: existing?.status ?? ('abierto' as TicketStatus),
     equipment_model: existing?.equipment_model ?? '',
-    serial_number: existing?.serial_number ?? '',
+    serial_number: existing?.serial_number ?? '', // Changed from assigned_tech_id
     assigned_tech_id: existing?.assigned_tech_id ?? '',
     scheduled_date: existing?.scheduled_date ?? '',
     scheduled_time: existing?.scheduled_time ?? '',
@@ -206,7 +216,7 @@ function TicketForm({
 
   const availableTechs = form.service_type
     ? technicians.filter((t) => t.active && t.specialties.includes(form.service_type as ServiceType))
-    : [];
+    : []; // Filter technicians by active and specialty
 
   const handleServiceTypeChange = (v: string) => {
     setForm((prev) => ({ ...prev, service_type: v as ServiceType, assigned_tech_id: '' }));
@@ -214,14 +224,14 @@ function TicketForm({
 
   const handleSubmit = () => {
     if (!form.client_id || !form.title || !form.service_type || !form.assigned_tech_id) return;
-    const payload = {
+    const payload: Database['public']['Tables']['tickets']['Insert'] | Database['public']['Tables']['tickets']['Update'] = {
       ...form,
       service_type: form.service_type as ServiceType,
       scheduled_date: form.scheduled_date || null,
       scheduled_time: form.scheduled_time || null,
       resolution_notes: form.resolution_notes || null,
     };
-    if (existing) {
+    if (existing?.id) { // Check for existing ID to determine update or create
       updateTicketMutation.mutate({ id: existing.id, ticket: payload });
     } else {
       createTicketMutation.mutate(payload);
@@ -296,18 +306,34 @@ function TicketForm({
           </Select>
         </div>
         {existing && (
-          <div>
-            <Label>Estado</Label>
-            <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as TicketStatus })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {(Object.keys(statusLabels) as TicketStatus[]).map((s) => (
-                  <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          // Technicians can change status, but not from 'cerrado'
+          // Admins can change any status
+          (userRole === 'admin' || (userRole === 'technician' && form.status !== 'cerrado')) ? (
+            <div>
+              <Label>Estado</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as TicketStatus })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(statusLabels) as TicketStatus[])
+                    .filter(s => userRole === 'admin' || s !== 'abierto' || form.status === 'abierto') // Admin can set to abierto, tech can't change from abierto to abierto
+                    .filter(s => userRole === 'admin' || s !== 'cerrado' || form.status === 'cerrado') // Admin can set to cerrado, tech can't change from cerrado
+                    .map((s) => (
+                      <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            // Display current status as read-only if technician and status is 'cerrado'
+            <div>
+              <Label>Estado</Label>
+              <Input value={statusLabels[form.status]} readOnly className="bg-muted/50" />
+            </div>
+          )
         )}
+        {/* If creating a new ticket, status is always 'abierto' */}
+        {!existing && <div><Label>Estado</Label><Input value={statusLabels['abierto']} readOnly className="bg-muted/50" /></div>}
+
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -343,7 +369,7 @@ function TicketForm({
 function TicketDetail({ ticket, client, tech }: {
   ticket: Ticket;
   client: Client | null;
-  tech: { name: string } | null;
+  tech: { id: string; name: string } | null;
 }) {
   return (
     <>

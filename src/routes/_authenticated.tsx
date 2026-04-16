@@ -14,10 +14,12 @@ export const Route = createFileRoute('/_authenticated')({
       throw redirect({ to: '/login', search: { redirect: location.href } });
     }
 
-    // Normalize email to be case-insensitive and trim whitespace
-    const userEmail = session.user.email?.trim().toLowerCase();
+    const userEmail = session.user.email?.trim().toLowerCase(); // Normalize email for robust comparison
     const userRole: 'admin' | 'technician' =
       userEmail === 'mundinet.sincelejo@gmail.com' ? 'admin' : 'technician';
+
+    // Log for debugging purposes
+    console.log(`User email: ${userEmail}, Assigned role: ${userRole}`);
 
     return {
       user: {

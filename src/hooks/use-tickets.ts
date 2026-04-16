@@ -7,13 +7,19 @@ const TICKETS_KEY = ['tickets'];
 const CLIENTS_KEY = ['clients'];
 const TECHNICIANS_KEY = ['technicians'];
 
-export function useTickets() {
+export function useTickets(assignedToUserId?: string) {
   return useQuery({
-    queryKey: TICKETS_KEY,
+    queryKey: assignedToUserId ? [...TICKETS_KEY, assignedToUserId] : TICKETS_KEY,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tickets')
-        .select('*, clients(*), technicians(name), ticket_parts(part_name)') // Ensure technicians(name) is selected
+        .select('*, clients(*), technicians(id, name), ticket_parts(part_name)'); // Select technician ID and name
+
+      if (assignedToUserId) {
+        query = query.eq('assigned_tech_id', assignedToUserId); // Filter by assigned_tech_id
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Ticket[];
@@ -21,7 +27,7 @@ export function useTickets() {
   });
 }
 
-export type Technician = Database['public']['Tables']['technicians']['Row'];
+export type Technician = Database['public']['Tables']['technicians']['Row']; // Full technician row
 
 export function useClients() {
   return useQuery({
@@ -139,7 +145,7 @@ export function useCreateTicket() {
     mutationFn: async (ticket: Database['public']['Tables']['tickets']['Insert']) => {
       const { data, error } = await supabase
         .from('tickets')
-        .insert(ticket)
+        .insert(ticket as Database['public']['Tables']['tickets']['Insert']) // Cast to ensure correct type for insert
         .select('*, clients(*), technicians(name), ticket_parts(part_name)')
         .single();
       if (error) throw error;
@@ -155,7 +161,7 @@ export function useUpdateTicket() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ticket }: { id: number; ticket: Database['public']['Tables']['tickets']['Update'] }) => {
-      const { data, error } = await supabase
+      const { data, error } = await supabase // Cast to ensure correct type for update
         .from('tickets')
         .update(ticket)
         .eq('id', id)

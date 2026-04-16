@@ -26,7 +26,7 @@ const navItems = [
   { to: '/calendario' as const, icon: CalendarDays, label: 'Calendario' },
 ];
 
-const adminRoutes = ['/clientes', '/tecnicos'];
+const adminRoutes = ['/clientes', '/tecnicos']; // Routes only visible to admins
 
 export function AppLayout({ children, user }: { children: React.ReactNode; user: UserWithRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);

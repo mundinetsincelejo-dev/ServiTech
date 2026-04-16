@@ -33,7 +33,9 @@ export const Route = createFileRoute('/_authenticated/calendario')({
 function CalendarioPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { data: tickets = [], isLoading } = useTickets();
+  const { user } = Route.useRouteContext();
+  // Filter tickets by assigned technician if the user is a technician
+  const { data: tickets = [], isLoading } = useTickets(user.role === 'technician' ? user.id : undefined);
 
   const scheduledTickets = tickets.filter((t) => t.scheduled_date);
 
@@ -159,6 +161,7 @@ function CalendarioPage() {
                 </CardContent>
               </Card>
             ))}
+        </div>
     </div>
   );
 }
