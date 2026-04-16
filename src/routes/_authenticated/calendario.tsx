@@ -62,8 +62,7 @@ function CalendarioPage() {
   }
 
   return (
-    <AppLayout>
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         {/* Calendar */}
         <Card>
           <CardContent className="p-4">
@@ -163,7 +162,6 @@ function CalendarioPage() {
               </Card>
             ))}
         </div>
-      </div>
-    </AppLayout>
+    </div>
   );
 }

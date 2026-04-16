@@ -58,11 +58,9 @@ function TicketsPage() {
 
   if (isLoading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
@@ -79,8 +77,7 @@ function TicketsPage() {
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
   return (
-    <AppLayout>
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 items-center gap-2">
             <div className="relative flex-1 max-w-sm">
@@ -171,14 +168,12 @@ function TicketsPage() {
             </div>
           </CardContent>
         </Card>
-
         <Dialog open={!!viewTicket} onOpenChange={(open) => !open && setViewTicket(null)}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             {viewTicket && <TicketDetail ticket={viewTicket} client={viewTicket.clients} tech={viewTicket.technicians} />}
           </DialogContent>
         </Dialog>
-      </div>
-    </AppLayout>
+    </div>
   );
 }
 

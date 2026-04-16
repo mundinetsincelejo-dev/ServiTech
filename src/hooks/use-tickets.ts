@@ -13,7 +13,7 @@ export function useTickets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tickets')
-        .select('*, clients(*), technicians(name), ticket_parts(part_name)')
+        .select('*, clients(*), technicians(name), ticket_parts(part_name)') // Ensure technicians(name) is selected
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Ticket[];

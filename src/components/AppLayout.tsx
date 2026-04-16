@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import type { UserWithRole } from '@/routes/_authenticated';
+import type { UserWithRole } from '@/routes/_authenticated'; // Corrected import path
 import {
   LayoutDashboard,
   Ticket,

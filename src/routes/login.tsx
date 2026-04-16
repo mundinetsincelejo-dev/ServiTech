@@ -44,7 +44,7 @@ function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate({ to: redirect || '/' });
+        navigate({ to: redirect || '/', replace: true }); // Use replace to prevent going back to login
       }
     } catch (err: any) {
       setError(err.message || 'Ha ocurrido un error');
