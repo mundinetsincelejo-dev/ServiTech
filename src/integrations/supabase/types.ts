@@ -187,7 +187,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      service_type: "preventivo" | "correctivo" | "instalacion"
+      service_type:
+        | "impresoras"
+        | "computadores"
+        | "redes_telecom"
+        | "camaras_seguridad"
+        | "desarrollo_software"
+        | "soporte_general"
       ticket_priority: "baja" | "media" | "alta" | "critica"
       ticket_status: "abierto" | "en_proceso" | "pausado" | "cerrado"
     }
@@ -317,7 +323,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      service_type: ["preventivo", "correctivo", "instalacion"],
+      service_type: [
+        "impresoras",
+        "computadores",
+        "redes_telecom",
+        "camaras_seguridad",
+        "desarrollo_software",
+        "soporte_general",
+      ],
       ticket_priority: ["baja", "media", "alta", "critica"],
       ticket_status: ["abierto", "en_proceso", "pausado", "cerrado"],
     },
