@@ -34,6 +34,47 @@ export function useClients() {
   });
 }
 
+export function useCreateClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (client: Database['public']['Tables']['clients']['Insert']) => {
+      const { data, error } = await supabase.from('clients').insert(client).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
+}
+
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, client }: { id: string; client: Database['public']['Tables']['clients']['Update'] }) => {
+      const { data, error } = await supabase.from('clients').update(client).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
+}
+
+export function useDeleteClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('clients').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
+}
+
 export function useCreateTicket() {
   const queryClient = useQueryClient();
   return useMutation({

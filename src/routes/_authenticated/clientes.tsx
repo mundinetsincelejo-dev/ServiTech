@@ -14,8 +14,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
-import { useStore, type Client } from '@/lib/store';
+import { Plus, Search, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-tickets';
+import type { Client } from '@/lib/mock-data';
 
 export const Route = createFileRoute('/_authenticated/clientes')({
   component: ClientesPage,
@@ -28,10 +29,23 @@ export const Route = createFileRoute('/_authenticated/clientes')({
 });
 
 function ClientesPage() {
-  const { clients, deleteClient } = useStore();
+  const { data: clients = [], isLoading } = useClients();
+  const deleteClientMutation = useDeleteClient();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Client | null>(null);
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const handleDelete = (id: string) => deleteClientMutation.mutate(id);
 
   const filtered = clients.filter(
     (c) =>
@@ -102,7 +116,7 @@ function ClientesPage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteClient(c.id)}>Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDelete(c.id)}>Eliminar</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -124,7 +138,8 @@ function ClientesPage() {
 }
 
 function ClientForm({ existing, onClose }: { existing: Client | null; onClose: () => void }) {
-  const { addClient, updateClient } = useStore();
+  const createClientMutation = useCreateClient();
+  const updateClientMutation = useUpdateClient();
   const [form, setForm] = useState({
     name: existing?.name ?? '',
     company: existing?.company ?? '',
@@ -136,9 +151,9 @@ function ClientForm({ existing, onClose }: { existing: Client | null; onClose: (
   const handleSubmit = () => {
     if (!form.name || !form.company || !form.email) return;
     if (existing) {
-      updateClient(existing.id, form);
+      updateClientMutation.mutate({ id: existing.id, client: form });
     } else {
-      addClient(form);
+      createClientMutation.mutate(form);
     }
     onClose();
   };
