@@ -12,7 +12,7 @@ export type TicketRow = Database['public']['Tables']['tickets']['Row'];
 // Ticket with joined client and parts
 export interface Ticket extends TicketRow {
   clients: Client;
-  assigned_tech: string; // The name of the assigned technician
+  technicians: { name: string } | null;
   ticket_parts: { part_name: string }[];
 }
 

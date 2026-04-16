@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+import type { UserWithRole } from '@/routes/_authenticated';
 import {
   LayoutDashboard,
   Ticket,
@@ -25,15 +26,28 @@ const navItems = [
   { to: '/calendario' as const, icon: CalendarDays, label: 'Calendario' },
 ];
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+const adminRoutes = ['/clientes', '/tecnicos'];
+
+export function AppLayout({ children, user }: { children: React.ReactNode; user: UserWithRole }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Filter nav items based on user role
+  const visibleNavItems = navItems.filter(item => {
+    if (user.role === 'admin') {
+      return true; // Admin sees everything
+    }
+    // Technicians see everything EXCEPT admin routes
+    return !adminRoutes.includes(item.to);
+  });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: '/login' });
   };
+
+  const currentLabel = navItems.find((n) => n.to === location.pathname)?.label ?? 'ServiTech';
 
   return (
     <div className="flex min-h-screen">
@@ -64,7 +78,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = location.pathname === item.to;
             return (
               <Link
@@ -110,7 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <h1 className="font-heading text-base font-semibold">
-            {navItems.find((n) => n.to === location.pathname)?.label ?? 'ServiTech'}
+            {currentLabel}
           </h1>
         </header>
 

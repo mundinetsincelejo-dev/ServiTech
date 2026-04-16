@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import {
   statusLabels, priorityLabels, serviceTypeLabels,
-  type TicketStatus, type TicketPriority, type ServiceType,
 } from '@/lib/mock-data';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -22,8 +21,16 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Eye, Pencil, Trash2 } from 'lucide-react';
-import { useStore, type Ticket } from '@/lib/store';
+import { Plus, Search, Eye, Pencil, Trash2, Loader2 } from 'lucide-react';
+import {
+  useTickets, useClients, useTechnicians,
+  useCreateTicket, useUpdateTicket, useDeleteTicket,
+} from '@/hooks/use-tickets';
+import type {
+  Ticket, Client, TicketStatus, TicketPriority, ServiceType,
+} from '@/lib/mock-data';
+import type { Technician } from '@/hooks/use-tickets';
+
 
 export const Route = createFileRoute('/_authenticated/tickets')({
   component: TicketsPage,
@@ -36,20 +43,33 @@ export const Route = createFileRoute('/_authenticated/tickets')({
 });
 
 function TicketsPage() {
-  const { tickets, clients, technicians, deleteTicket } = useStore();
+  const { data: tickets = [], isLoading: loadingTickets } = useTickets();
+  const { data: clients = [], isLoading: loadingClients } = useClients();
+  const { data: technicians = [], isLoading: loadingTechs } = useTechnicians();
+  const deleteTicketMutation = useDeleteTicket();
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Ticket | null>(null);
   const [viewTicket, setViewTicket] = useState<Ticket | null>(null);
 
-  const getClientName = (cid: string) => clients.find((c) => c.id === cid)?.company ?? '';
-  const getTechName = (tid: string) => technicians.find((t) => t.id === tid)?.name ?? '';
+  const isLoading = loadingTickets || loadingClients || loadingTechs;
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const filtered = tickets.filter((t) => {
     const matchesSearch =
       t.title.toLowerCase().includes(search.toLowerCase()) ||
-      getClientName(t.client_id).toLowerCase().includes(search.toLowerCase()) ||
+      t.clients?.company.toLowerCase().includes(search.toLowerCase()) ||
       String(t.id).includes(search);
     const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
     return matchesSearch && matchesStatus;
@@ -87,7 +107,7 @@ function TicketsPage() {
               <DialogHeader>
                 <DialogTitle>{editing ? 'Editar Ticket' : 'Crear Solicitud'}</DialogTitle>
               </DialogHeader>
-              <TicketForm existing={editing} onClose={closeForm} />
+              <TicketForm existing={editing} onClose={closeForm} clients={clients} technicians={technicians} />
             </DialogContent>
           </Dialog>
         </div>
@@ -113,11 +133,11 @@ function TicketsPage() {
                     <tr key={t.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs">#{t.id}</td>
                       <td className="max-w-[200px] truncate px-4 py-3 font-medium">{t.title}</td>
-                      <td className="hidden px-4 py-3 sm:table-cell text-muted-foreground">{getClientName(t.client_id)}</td>
+                      <td className="hidden px-4 py-3 sm:table-cell text-muted-foreground">{t.clients?.company}</td>
                       <td className="hidden px-4 py-3 md:table-cell text-muted-foreground">{serviceTypeLabels[t.service_type]}</td>
                       <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
                       <td className="hidden px-4 py-3 lg:table-cell"><PriorityBadge priority={t.priority} /></td>
-                      <td className="hidden px-4 py-3 lg:table-cell text-muted-foreground">{getTechName(t.assigned_tech_id)}</td>
+                      <td className="hidden px-4 py-3 lg:table-cell text-muted-foreground">{t.technicians?.name}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => setViewTicket(t)}><Eye className="h-4 w-4" /></Button>
@@ -135,7 +155,7 @@ function TicketsPage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteTicket(t.id)}>Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={() => deleteTicketMutation.mutate(t.id)}>Eliminar</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -154,7 +174,7 @@ function TicketsPage() {
 
         <Dialog open={!!viewTicket} onOpenChange={(open) => !open && setViewTicket(null)}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            {viewTicket && <TicketDetail ticket={viewTicket} />}
+            {viewTicket && <TicketDetail ticket={viewTicket} client={viewTicket.clients} tech={viewTicket.technicians} />}
           </DialogContent>
         </Dialog>
       </div>
@@ -163,8 +183,16 @@ function TicketsPage() {
 }
 
 /* ── Ticket Form with conditional tech filtering ── */
-function TicketForm({ existing, onClose }: { existing: Ticket | null; onClose: () => void }) {
-  const { clients, addTicket, updateTicket, getTechniciansBySpecialty } = useStore();
+function TicketForm({
+  existing, onClose, clients, technicians,
+}: {
+  existing: Ticket | null;
+  onClose: () => void;
+  clients: Client[];
+  technicians: Technician[];
+}) {
+  const createTicketMutation = useCreateTicket();
+  const updateTicketMutation = useUpdateTicket();
 
   const [form, setForm] = useState({
     client_id: existing?.client_id ?? '',
@@ -181,7 +209,9 @@ function TicketForm({ existing, onClose }: { existing: Ticket | null; onClose: (
     resolution_notes: existing?.resolution_notes ?? '',
   });
 
-  const availableTechs = form.service_type ? getTechniciansBySpecialty(form.service_type as ServiceType) : [];
+  const availableTechs = form.service_type
+    ? technicians.filter((t) => t.active && t.specialties.includes(form.service_type as ServiceType))
+    : [];
 
   const handleServiceTypeChange = (v: string) => {
     setForm((prev) => ({ ...prev, service_type: v as ServiceType, assigned_tech_id: '' }));
@@ -195,12 +225,11 @@ function TicketForm({ existing, onClose }: { existing: Ticket | null; onClose: (
       scheduled_date: form.scheduled_date || null,
       scheduled_time: form.scheduled_time || null,
       resolution_notes: form.resolution_notes || null,
-      resolution_time_hours: existing?.resolution_time_hours ?? null,
     };
     if (existing) {
-      updateTicket(existing.id, payload);
+      updateTicketMutation.mutate({ id: existing.id, ticket: payload });
     } else {
-      addTicket(payload);
+      createTicketMutation.mutate(payload);
     }
     onClose();
   };
@@ -316,11 +345,11 @@ function TicketForm({ existing, onClose }: { existing: Ticket | null; onClose: (
 }
 
 /* ── Detail view ── */
-function TicketDetail({ ticket }: { ticket: Ticket }) {
-  const { clients, technicians } = useStore();
-  const client = clients.find((c) => c.id === ticket.client_id);
-  const tech = technicians.find((t) => t.id === ticket.assigned_tech_id);
-
+function TicketDetail({ ticket, client, tech }: {
+  ticket: Ticket;
+  client: Client | null;
+  tech: { name: string } | null;
+}) {
   return (
     <>
       <DialogHeader>
@@ -340,7 +369,7 @@ function TicketDetail({ ticket }: { ticket: Ticket }) {
           <InfoField label="Teléfono" value={client?.phone ?? ''} />
           <InfoField label="Email" value={client?.email ?? ''} />
           <InfoField label="Categoría" value={serviceTypeLabels[ticket.service_type]} />
-          <InfoField label="Técnico" value={tech?.name ?? ''} />
+          <InfoField label="Técnico" value={tech?.name ?? 'No asignado'} />
           <InfoField label="Equipo" value={ticket.equipment_model} />
           <InfoField label="Nº Serie" value={ticket.serial_number} />
         </div>

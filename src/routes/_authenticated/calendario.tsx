@@ -157,7 +157,7 @@ function CalendarioPage() {
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-muted-foreground">{serviceTypeLabels[t.service_type]}</span>
                     <PriorityBadge priority={t.priority} />
-                    <span className="text-muted-foreground ml-auto">{t.assigned_tech}</span>
+                    <span className="text-muted-foreground ml-auto">{t.technicians?.name}</span>
                   </div>
                 </CardContent>
               </Card>

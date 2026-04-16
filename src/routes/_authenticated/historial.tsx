@@ -122,7 +122,7 @@ function HistorialPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Wrench className="h-3 w-3" />
-                      {t.assigned_tech}
+                      {t.technicians?.name || 'No asignado'}
                     </span>
                     {t.resolution_time_hours != null && (
                       <span>Resolución: {t.resolution_time_hours} hrs</span>

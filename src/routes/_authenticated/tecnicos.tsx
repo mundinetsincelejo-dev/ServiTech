@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,11 +15,18 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
-import { useStore, type Technician } from '@/lib/store';
+import { Plus, Search, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { useTechnicians, useCreateTechnician, useUpdateTechnician, useDeleteTechnician, type Technician } from '@/hooks/use-tickets';
 import { serviceTypeLabels, type ServiceType } from '@/lib/mock-data';
 
 export const Route = createFileRoute('/_authenticated/tecnicos')({
+  beforeLoad: ({ context }) => {
+    // context is inherited from the parent _authenticated route
+    if (context.user.role !== 'admin') {
+      // If not an admin, redirect to the dashboard
+      throw redirect({ to: '/' });
+    }
+  },
   component: TecnicosPage,
   head: () => ({
     meta: [
@@ -32,10 +39,23 @@ export const Route = createFileRoute('/_authenticated/tecnicos')({
 const allSpecialties = Object.keys(serviceTypeLabels) as ServiceType[];
 
 function TecnicosPage() {
-  const { technicians, deleteTechnician } = useStore();
+  const { data: technicians = [], isLoading } = useTechnicians();
+  const deleteTechnicianMutation = useDeleteTechnician();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Technician | null>(null);
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const handleDelete = (id: string) => deleteTechnicianMutation.mutate(id);
 
   const filtered = technicians.filter(
     (t) =>
@@ -122,7 +142,7 @@ function TecnicosPage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteTechnician(t.id)}>Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDelete(t.id)}>Eliminar</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -144,7 +164,9 @@ function TecnicosPage() {
 }
 
 function TechnicianForm({ existing, onClose }: { existing: Technician | null; onClose: () => void }) {
-  const { addTechnician, updateTechnician } = useStore();
+  const createTechnicianMutation = useCreateTechnician();
+  const updateTechnicianMutation = useUpdateTechnician();
+
   const [form, setForm] = useState({
     name: existing?.name ?? '',
     email: existing?.email ?? '',
@@ -165,9 +187,9 @@ function TechnicianForm({ existing, onClose }: { existing: Technician | null; on
   const handleSubmit = () => {
     if (!form.name || form.specialties.length === 0) return;
     if (existing) {
-      updateTechnician(existing.id, form);
+      updateTechnicianMutation.mutate({ id: existing.id, technician: form });
     } else {
-      addTechnician(form);
+      createTechnicianMutation.mutate(form);
     }
     onClose();
   };

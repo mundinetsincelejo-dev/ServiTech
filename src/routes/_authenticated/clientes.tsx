@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +19,13 @@ import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@
 import type { Client } from '@/lib/mock-data';
 
 export const Route = createFileRoute('/_authenticated/clientes')({
+  beforeLoad: ({ context }) => {
+    // context is inherited from the parent _authenticated route
+    if (context.user.role !== 'admin') {
+      // If not an admin, redirect to the dashboard
+      throw redirect({ to: '/' });
+    }
+  },
   component: ClientesPage,
   head: () => ({
     meta: [

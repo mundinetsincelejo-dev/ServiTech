@@ -66,11 +66,12 @@ function DashboardPage() {
   const techLoad = tickets
     .filter((t) => t.status !== 'cerrado')
     .reduce<Record<string, number>>((acc, t) => {
-      acc[t.assigned_tech] = (acc[t.assigned_tech] || 0) + 1;
+      const techName = t.technicians?.name || 'Sin asignar';
+      acc[techName] = (acc[techName] || 0) + 1;
       return acc;
     }, {});
 
-  const techData = Object.entries(techLoad).map(([name, count]) => ({ name: name.split(' ')[0], tickets: count }));
+  const techData = Object.entries(techLoad).map(([name, count]) => ({ name: name === 'Sin asignar' ? name : name.split(' ')[0], tickets: count }));
 
   const kpis = [
     { label: 'Pendientes', value: open + inProgress + paused, icon: ClipboardList, accent: 'text-info' },
