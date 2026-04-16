@@ -30,7 +30,10 @@ export const priorityLabels: Record<TicketPriority, string> = {
 };
 
 export const serviceTypeLabels: Record<ServiceType, string> = {
-  preventivo: 'Preventivo',
-  correctivo: 'Correctivo',
-  instalacion: 'Instalación',
+  impresoras: 'Impresoras',
+  computadores: 'Computadores',
+  redes_telecom: 'Redes y Telecomunicaciones',
+  camaras_seguridad: 'Cámaras de Seguridad',
+  desarrollo_software: 'Desarrollo de Software',
+  soporte_general: 'Soporte General',
 };
