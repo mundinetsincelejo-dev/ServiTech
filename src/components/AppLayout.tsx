@@ -5,6 +5,8 @@ import {
   Ticket,
   History,
   CalendarDays,
+  Users,
+  UserCog,
   Menu,
   X,
   Wrench,
@@ -17,6 +19,8 @@ import { supabase } from '@/integrations/supabase/client';
 const navItems = [
   { to: '/' as const, icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/tickets' as const, icon: Ticket, label: 'Tickets' },
+  { to: '/clientes' as const, icon: Users, label: 'Clientes' },
+  { to: '/tecnicos' as const, icon: UserCog, label: 'Técnicos' },
   { to: '/historial' as const, icon: History, label: 'Historial' },
   { to: '/calendario' as const, icon: CalendarDays, label: 'Calendario' },
 ];
